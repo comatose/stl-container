@@ -1,10 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
 
 module Data.UnorderedMap
        (
        UnorderedMap
-
        , empty
        , emptySized
        , insert
@@ -17,53 +15,17 @@ module Data.UnorderedMap
        , fromList
        ) where
 
-import Data.IORef
-import Data.Serialize
-import Prelude hiding (lookup)
-import Control.Monad hiding (foldM)
-import Foreign hiding (unsafeForeignPtrToPtr)
-import Foreign.C.Types
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Internal as Bi
+import           Control.Monad              hiding (foldM)
+import qualified Data.ByteString            as B
+import qualified Data.ByteString.Internal   as Bi
+import           Data.IORef
+import           Data.Serialize
+import           Data.UnorderedMap.Internal
+import           Foreign                    hiding (unsafeForeignPtrToPtr)
+import           Prelude                    hiding (lookup)
 
-data UMO  -- unordered_map object
-type UnorderedMap_ = ForeignPtr UMO
-data UnorderedMap k v = UM {-# UNPACK #-} !UnorderedMap_
-
-foreign import ccall unsafe "hashmap.h hashmap_create"
-  hashmap_create :: IO (Ptr UMO)
-
-foreign import ccall unsafe "hashmap.h hashmap_create_sized"
-  hashmap_create_sized :: CSize -> IO (Ptr UMO)
-
-foreign import ccall unsafe "hashmap.h &hashmap_destroy"
-  hashmap_destroy :: FinalizerPtr UMO
-
-foreign import ccall unsafe "hashmap.h hashmap_insert"
-  hashmap_insert :: (Ptr UMO) -> Ptr Word8 -> CSize -> Ptr Word8 -> CSize -> IO ()
-
-foreign import ccall unsafe "hashmap.h hashmap_lookup"
-  hashmap_lookup :: (Ptr UMO) -> Ptr Word8 -> CSize -> Ptr (Ptr Word8) -> Ptr CSize -> IO ()
-
-foreign import ccall unsafe "hashmap.h hashmap_delete"
-  hashmap_delete :: (Ptr UMO) -> Ptr Word8 -> CSize -> IO ()
-
-foreign import ccall unsafe "hashmap.h hashmap_size"
-  hashmap_size :: (Ptr UMO) -> IO CSize
-
-data UMIO -- unordered_map::iterator object
-
-foreign import ccall unsafe "hashmap.h iter_create"
-  iter_create :: (Ptr UMO) -> IO (Ptr UMIO)
-
-foreign import ccall unsafe "hashmap.h iter_destroy"
-  iter_destroy :: (Ptr UMIO) -> IO ()
-
-foreign import ccall unsafe "hashmap.h iter_hasNext"
-  iter_hasNext :: (Ptr UMO) -> (Ptr UMIO) -> IO Bool
-
-foreign import ccall unsafe "hashmap.h iter_next"
-  iter_next :: (Ptr UMO) -> (Ptr UMIO) -> Ptr (Ptr Word8) -> Ptr CSize -> Ptr (Ptr Word8) -> Ptr CSize -> IO ()
+-- data UnorderedMap k v = UM {-# UNPACK #-} !UnorderedMap_
+data UnorderedMap k v = UM {-# UNPACK #-} !(ForeignPtr UMO)
 
 empty :: IO (UnorderedMap k v)
 empty = hashmap_create >>= liftM UM . newForeignPtr hashmap_destroy
@@ -71,14 +33,14 @@ empty = hashmap_create >>= liftM UM . newForeignPtr hashmap_destroy
 emptySized :: Int -> IO (UnorderedMap k v)
 emptySized s = hashmap_create_sized (fromIntegral s) >>= liftM UM . newForeignPtr hashmap_destroy
 
-insertB :: UnorderedMap_ -> B.ByteString -> B.ByteString -> IO ()
+insertB :: ForeignPtr UMO -> B.ByteString -> B.ByteString -> IO ()
 insertB umap0 (Bi.PS key0 offK lenK) (Bi.PS val0 offV lenV) =
   withForeignPtr umap0 $ \umap ->
   withForeignPtr key0 $ \key ->
   withForeignPtr val0 $ \val ->
   hashmap_insert umap (key `plusPtr` offK) (fromIntegral lenK) (val `plusPtr` offV) (fromIntegral lenV)
-  
-lookupB :: UnorderedMap_ -> B.ByteString -> IO (Maybe B.ByteString)
+
+lookupB :: ForeignPtr UMO -> B.ByteString -> IO (Maybe B.ByteString)
 lookupB umap0 (Bi.PS key0 offK lenK) =
   withForeignPtr umap0 $ \umap ->
   withForeignPtr key0 $ \key ->
@@ -91,20 +53,20 @@ lookupB umap0 (Bi.PS key0 offK lenK) =
       else do pVal <- peek ppVal
               liftM Just $ Bi.create (fromIntegral nV) (\dst -> copyBytes dst pVal (fromIntegral nV))
 
-deleteB :: UnorderedMap_ -> B.ByteString -> IO ()
+deleteB :: ForeignPtr UMO -> B.ByteString -> IO ()
 deleteB umap0 (Bi.PS key0 offK lenK) =
   withForeignPtr umap0 $ \umap ->
   withForeignPtr key0 $ \key ->
   hashmap_delete umap (key `plusPtr` offK) (fromIntegral lenK)
 
-foldMB :: (a -> (B.ByteString, B.ByteString) -> IO a) -> a -> UnorderedMap_ -> IO a
+foldMB :: (a -> (B.ByteString, B.ByteString) -> IO a) -> a -> ForeignPtr UMO -> IO a
 foldMB f acc0 umap0 = withForeignPtr umap0 $ \umap -> do
   acc <- newIORef acc0
   it <- iter_create umap
   loop umap it acc
   iter_destroy it
   readIORef acc
-    where 
+    where
       loop umap it acc = do
         hasNext <- iter_hasNext umap it
         if not hasNext
