@@ -22,18 +22,15 @@ library
   cc-options:
     -Wall
     -std=c++11
-    -O2
   ghc-options:
     -Wall
-    -O
   hs-source-dirs:
     src
   include-dirs:
     src/c++
   exposed-modules:
-    -- Data.DataTypes
     Data.UnorderedMap
-    -- Data.Storable.UnorderedMap
+    Data.UnorderedMap.Internal
   extra-libraries:
     stdc++
   c-sources:

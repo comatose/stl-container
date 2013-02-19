@@ -2,7 +2,6 @@
 
 module Data.UnorderedMap.Internal where
 
-import Prelude hiding (lookup)
 import Foreign hiding (unsafeForeignPtrToPtr)
 import Foreign.C.Types
 
