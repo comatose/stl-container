@@ -12,10 +12,10 @@ int main(int argc, char** argv){
     }
 	
     fstream f(argv[1], ios::binary | ios::in);
-    uint8_t block[512];
+    char block[512];
     HashMap* h = hashmap_create();
     while(f.good()){
-	size_t n = f.readsome((char*)block, sizeof(block));
+	size_t n = f.readsome(block, sizeof(block));
 	if(n < 1)
 	    break;
 	hashmap_insert(h, block, n, block, n / 2);
@@ -24,7 +24,7 @@ int main(int argc, char** argv){
 
     HashMap::iterator* it = iter_create(h);
     while(iter_hasNext(h, it)){
-	uint8_t *pKey, *pVal;
+	char *pKey, *pVal;
 	size_t nKey, nVal;
 	iter_next(h, it, &pKey, &nKey, &pVal, &nVal);
 	cout << "[" << nKey << ":" << nVal << "]" << endl;

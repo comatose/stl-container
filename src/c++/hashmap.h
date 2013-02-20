@@ -2,10 +2,10 @@
 #define __hashmap_h__
 
 #include <cstdint>
-#include <vector>
 #include <string>
 #include <unordered_map>
 
+/* #include <vector> */
 /* typedef std::vector<uint8_t> Key; */
 /* typedef std::vector<uint8_t> Value; */
 
@@ -21,16 +21,16 @@
 /*     }; */
 /* } */
 
-typedef std::string Key;
-typedef std::string Value;
-
-typedef std::unordered_map<Key, Value, std::hash<Key>> HashMap;
-typedef HashMap::iterator HashMapIter;
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+    typedef std::string Key;
+    typedef std::string Value;
+
+    typedef std::unordered_map<Key, Value, std::hash<Key>> HashMap;
+    typedef HashMap::iterator HashMapIter;
 
     HashMap* hashmap_create();
     HashMap* hashmap_create_sized(std::size_t size);
