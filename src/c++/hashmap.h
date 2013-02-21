@@ -45,8 +45,7 @@ extern "C"
     void iter_destroy(HashMap::iterator* it);
 
     bool iter_hasNext(HashMap* h, HashMap::iterator* it);
-    void iter_next(HashMap* h, HashMap::iterator* it, Key::value_type** pKey, std::size_t* pNK
-		   , Value::value_type** pVal, std::size_t* pNV);
+    void iter_next(HashMap* h, HashMap::iterator* it, Key::value_type** pKey, std::size_t* pNK, Value::value_type** pVal, std::size_t* pNV);
     
 #ifdef __cplusplus
 }
